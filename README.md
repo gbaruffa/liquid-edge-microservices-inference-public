@@ -10,10 +10,8 @@ The Robomaster S1 from DJI is modified with a custom communication turret (uses 
 
 For more details, please read (and cite!) the associated scientific paper
 
-```
-G. Baruffa, G. Costante, F. Crocetti, L. Rugini, P. Valigi, P. Banelli, A. Detti, "AI-driven Ground Robots: Mobile Edge Computing and
+> G. Baruffa, G. Costante, F. Crocetti, L. Rugini, P. Valigi, P. Banelli, A. Detti, "AI-driven Ground Robots: Mobile Edge Computing and
 mmWave Cellular Networks at Work," submitted to _IEEE Open Journal of the Communications Society_, 2023
-```
 
 **Abstract** - *AI-driven ground robots are gaining attention for their potential to transform urban life in areas like transportation, public safety, and environmental monitoring. The daily growth of AI technologies is paving the way for complex and computation-intensive tasks that these robots could perform, a vision that, however, clashes with the need for plenty of computing power and energy available in the robot, which is only sometimes possible. In these contexts, using cloud/edge computing services in conjunction with very high-speed communication systems can allow the workload to be offloaded out of the robot and consequently make the use of low-power robots feasible for complex tasks. This paper combines contemporary cloud and communication technologies in an architectural framework designed to provide ground robot applications with the ability to offload part of their tasks to cloud/edge data centers connected by cellular networks. The resulting architecture is meant for microservice applications and uses Kubernetes, Istio service mesh, OpenFlow, and IEEE 802.11ad mmWave (60 GHz) Wi-Fi access points. The architecture is validated through a testbed in which a ground robot autonomously tracks a moving object through AI algorithms and whose microservices are deployed on the robot and on the edge/cloud data centers it can exploit during its movements in different cells of a cellular network. Overall, the proposed network and cloud platform is generic and can be used for many other mobile applications that need to offload some of their tasks to back-end cloud/edge microservices.* 
 
