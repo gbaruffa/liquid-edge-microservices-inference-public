@@ -11,7 +11,7 @@ The Robomaster S1 from DJI is modified with a custom communication turret (uses 
 For more details, please read (and cite!) the associated scientific paper
 
 ```
-G. Baruffa et al., "AI-driven Ground Robots: Mobile Edge Computing and
+G. Baruffa, G. Costante, F. Crocetti, L. Rugini, P. Valigi, P. Banelli, A. Detti, "AI-driven Ground Robots: Mobile Edge Computing and
 mmWave Cellular Networks at Work," submitted to _IEEE Open Journal of the Communications Society_, 2023
 ```
 
