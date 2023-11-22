@@ -1,0 +1,103 @@
+#FROM nvidia/cuda:11.3-devel-ubuntu20.04
+
+FROM nvidia/cuda:11.7.1-devel-ubuntu20.04
+
+ARG OPENCV_VERSION=4.6.0
+
+COPY libcudnn8_8.5.0.96-1+cuda11.7_amd64.deb / 
+#modificato 
+
+
+COPY libcudnn8-dev_8.5.0.96-1+cuda11.7_amd64.deb / 
+#modificato
+
+RUN apt-get update 
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+#modificato
+
+#RUN apt-key del 7fa2af80
+
+#RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
+RUN apt-get upgrade -y &&\
+    # Install build tools, build dependencies and python
+    apt-get install -y \
+    python3-pip \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    unzip \
+    yasm \
+    pkg-config \
+    libswscale-dev \
+    libtbb2 \
+    libtbb-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libavformat-dev \
+    libpq-dev \
+    libxine2-dev \
+    libglew-dev \
+    libtiff5-dev \
+    zlib1g-dev \
+    libjpeg-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libpostproc-dev \
+    libswscale-dev \
+    libeigen3-dev \
+    libtbb-dev \
+    libgtk2.0-dev \
+    pkg-config \
+    ## Python
+    python3-dev \
+    python3-numpy \
+    # cuDNN
+    ./libcudnn8_8.5.0.96-1+cuda11.7_amd64.deb \
+    #modificato
+    ./libcudnn8-dev_8.5.0.96-1+cuda11.7_amd64.deb \
+    #modificato
+    && rm -rf /var/lib/apt/lists/* /libcudnn*
+
+RUN cd /opt/ &&\
+    # Download and unzip OpenCV and opencv_contrib and delte zip files
+    wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
+    unzip $OPENCV_VERSION.zip &&\
+    rm $OPENCV_VERSION.zip &&\
+    wget https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
+    unzip ${OPENCV_VERSION}.zip &&\
+    rm ${OPENCV_VERSION}.zip &&\
+    # Create build folder and switch to it
+    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
+    # Cmake configure
+    cmake \
+      -D OPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+      -D INSTALL_PYTHON_EXAMPLES=OFF \
+      -D INSTALL_C_EXAMPLES=OFF \
+      -D WITH_CUDA=ON \
+      -D WITH_CUDNN=ON \
+      -D WITH_CUBLAS=ON \
+      -D ENABLE_FAST_MATH=1 \
+      -D CUDA_FAST_MATH=1 \
+      -D CMAKE_BUILD_TYPE=RELEASE \
+      -D OPENCV_DNN_CUDA=ON \
+      -D WITH_CUBLAS=ON \
+      -D BUILD_opencv_dnn=1 \
+      -D HAVE_opencv_python3=ON \
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      .. &&\
+    # Make
+    make -j"$(nproc)" && \
+    # Install to /usr/local/lib
+    make install && \
+    ldconfig &&\
+    # Remove OpenCV sources and build folder
+    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
+
+RUN echo "import site" >> /etc/python3.8/sitecustomize.py
+
+RUN echo 'site.addsitedir("/usr/local/lib/python3.8/site-packages/")' >> /etc/python3.8/sitecustomize.py

@@ -1,0 +1,49 @@
+# List of radio resources to be monitored
+# For each resource, there are three common fields:
+# - identifier: an easy name to identify the resource
+# - techno: the type of radio technology used
+# - iface: the Linux network interface associated to the device
+# All the other fields are dependent on the technology
+radioresources:
+  - identifier: mikrotik2
+    techno: "802.11ad"
+    iface: eth0
+    ipaddress: 192.168.100.82
+    user: admin
+    password: ""
+  - identifier: mikrotik3
+    techno: "802.11ad"
+    iface: eth1
+    ipaddress: 192.168.100.83
+    user: admin
+    password: ""
+  - identifier: mikrotik4
+    techno: "802.11ad"
+    iface: eth2
+    ipaddress: 192.168.100.84 
+    user: admin
+    password: ""
+  - identifier: mikrotik8
+    techno: "802.11ad"
+    iface: eth3
+    ipaddress: 192.168.100.88 
+    user: admin
+    password: ""
+  - identifier: tplink
+    techno: "802.11b/g/n"
+    iface: wlan1
+    ipaddress: 192.168.100.90
+    user: "admin"
+    password: ""
+
+# Metric difference that triggers a switch
+dmetric: 400
+
+# monitoring period in seconds
+tmon: 1
+
+# decision period in seconds
+tdec: 1
+
+# service access point IP address
+serviceIP: 192.168.100.10

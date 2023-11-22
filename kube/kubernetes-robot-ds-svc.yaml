@@ -1,0 +1,143 @@
+---
+# daemonset for CPU-based pods
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: robodemo
+  name: detection-cpu-pod
+  labels:
+    app: detection-app
+spec:
+  selector:
+    matchLabels:
+      app: detection-app
+  template:
+    metadata:
+      labels:
+        app: detection-app
+    spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: objectdetection
+          image: 192.168.0.140:5000/liquidedge/objectdetection:kube
+          env:
+            - name: FACEDETECTION_HOST
+              value: "localhost:50053"
+            - name: YOLODETECTION_HOST
+              value: "localhost:50055"
+          ports:
+            - containerPort: 50051
+        - name: facedetection
+          image: 192.168.0.140:5000/liquidedge/facedetection:kube
+        - name: yolodetection
+          image: 192.168.0.140:5000/liquidedge/yolodetection:kube
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: gputype
+                operator: DoesNotExist
+
+---
+# daemonset for GPU-based pods
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: robodemo
+  name: detection-gpu-pod
+  labels:
+    app: detection-app
+spec:
+  selector:
+    matchLabels:
+      app: detection-app
+  template:
+    metadata:
+      labels:
+        app: detection-app
+    spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: objectdetection
+          image: 192.168.0.140:5000/liquidedge/objectdetection:kube
+          env:
+            - name: FACEDETECTION_HOST
+              value: "localhost:50053"
+            - name: YOLODETECTION_HOST
+              value: "localhost:50055"
+          ports:
+            - containerPort: 50051
+        - name: facedetection
+          image: 192.168.0.140:5000/liquidedge/facedetection:kube
+        - name: yolodetection
+          image: 192.168.0.140:5000/liquidedge/yolodetection-cuda:kube
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: gputype
+                operator: Exists
+
+---
+# deployment for the proxyes into the wireless devices
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: robodemo
+  name: apache-ap-proxy-pod
+  labels:
+    app: apache-ap-proxy
+spec:
+  selector:
+    matchLabels:
+      app: apache-ap-proxy
+  template:
+    metadata:
+      labels:
+        app: apache-ap-proxy
+    spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+      # nodeSelector:
+      #   wap60g: ap
+      containers:
+        - name: apache
+          image: 192.168.0.140:5000/liquidedge/apache-ap-proxy
+          ports:
+            - containerPort: 8081
+              hostPort: 8081
+            - containerPort: 8087
+              hostPort: 8087
+            - containerPort: 8090
+              hostPort: 8090
+
+---
+# the main detection service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: robodemo
+  name: detection-svc
+  annotations: 
+    service.kubernetes.io/topology-aware-hints: Auto
+spec:
+  selector:
+    app: detection-app
+  type: NodePort
+  ports:
+    - name: grpc-detection-svc
+      protocol: TCP
+      nodePort: 30051
+      port: 50051
+      targetPort: 50051
+

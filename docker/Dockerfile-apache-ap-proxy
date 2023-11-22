@@ -1,0 +1,5 @@
+FROM httpd:2.4
+
+EXPOSE 8081 8087 8090
+
+COPY ./docker/my-httpd.conf /usr/local/apache2/conf/httpd.conf

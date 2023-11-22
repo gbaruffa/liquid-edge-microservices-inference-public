@@ -1,0 +1,25 @@
+FROM python
+
+RUN mkdir /service
+
+COPY src/protobufs/ /service/protobufs/
+
+COPY src/facedetection/ /service/facedetection/
+
+WORKDIR /service/facedetection
+
+RUN python -m pip install --upgrade pip
+
+RUN apt-get update
+
+RUN apt install -y libgl1-mesa-glx
+
+RUN python -m pip install --upgrade setuptools
+
+RUN python -m pip install numpy==1.23.3 grpcio==1.49.1 grpcio-tools==1.49.1 opencv_python==4.6.0.66 protobuf==4.21.7
+
+RUN python -m grpc_tools.protoc -I ../protobufs --python_out=. --grpc_python_out=. ../protobufs/detection.proto
+
+EXPOSE 50053
+
+ENTRYPOINT [ "python", "facedetection.py" ]

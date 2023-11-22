@@ -1,0 +1,31 @@
+FROM 192.168.0.140:5000/liquidedge/python3.8-cuda11.7.1-opencv4.6
+
+RUN mkdir /service
+
+COPY src/protobufs/ /service/protobufs/
+
+COPY src/yolodetection/ /service/yolodetection/
+
+#COPY tmp/Darknet /service/liquid-edge-model-zoo/Darknet
+
+RUN wget -P /service/liquid-edge-model-zoo/Darknet https://pjreddie.com/media/files/yolov3.weights 
+
+RUN wget -P /service/liquid-edge-model-zoo/Darknet https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov3.cfg 
+
+RUN wget -P /service/liquid-edge-model-zoo/Darknet https://raw.githubusercontent.com/pjreddie/darknet/master/data/coco.names
+
+WORKDIR /service/yolodetection
+
+RUN python3 -m pip install --upgrade pip
+
+RUN apt-get update
+
+RUN apt-get install -y libgl1-mesa-glx
+
+RUN python3 -m pip install numpy==1.23.3 grpcio==1.49.1 grpcio-tools==1.49.1 protobuf==4.21.7
+
+RUN python3 -m grpc_tools.protoc -I ../protobufs --python_out=. --grpc_python_out=. ../protobufs/detection.proto
+
+EXPOSE 50055
+
+ENTRYPOINT [ "python3", "yolodetection.py", "-g" ]

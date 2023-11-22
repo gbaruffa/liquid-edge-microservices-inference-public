@@ -1,0 +1,36 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: robot-gateway
+  namespace: robodemo
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+      - "*"
+    port:
+      number: 31400
+      name: grpc
+      protocol: GRPC
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: robot-virtualservice
+  namespace: robodemo
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - robot-gateway
+  http:
+    - match:
+      - gateways:
+          - robot-gateway
+        port: 31400
+      route:
+        - destination:
+            host: detection-svc.robodemo.svc.cluster.local
+            port:
+              number: 50051

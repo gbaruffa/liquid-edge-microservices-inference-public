@@ -1,0 +1,10 @@
+Flask==2.3.2
+grpcio==1.49.1
+numpy==1.19.5
+opencv_python==4.6.0.66
+picamera2==0.3.3
+protobuf==4.23.4
+py_mjpeg==1.0.1
+robomaster==0.1.1.68
+simple_pid==1.0.1
+Werkzeug==2.3.6

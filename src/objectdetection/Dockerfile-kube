@@ -1,0 +1,21 @@
+FROM python:3.8-slim
+
+RUN mkdir /service
+
+COPY src/protobufs/ /service/protobufs/
+
+COPY src/objectdetection/ /service/objectdetection/
+
+WORKDIR /service/objectdetection
+
+RUN python3 -m pip install --upgrade pip
+
+RUN apt-get update
+
+RUN python3 -m pip install grpcio==1.49.1 grpcio-tools==1.49.1 protobuf==4.21.7 py_mjpeg==1.0.1 Werkzeug Flask
+
+RUN python3 -m grpc_tools.protoc -I ../protobufs --python_out=. --grpc_python_out=. ../protobufs/detection.proto
+
+EXPOSE 50051
+
+ENTRYPOINT [ "python", "objectdetection.py" ]
