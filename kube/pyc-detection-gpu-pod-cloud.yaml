@@ -1,0 +1,45 @@
+# daemonset for GPU-based pods
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: robodemo
+  name: detection-gpu-pod-cloud
+  labels:
+    app: detection-app
+spec:
+  selector:
+    matchLabels:
+      app: detection-app
+  template:
+    metadata:
+      labels:
+        app: detection-app
+    spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.kubernetes.io/region
+                operator: In
+                values:
+                  - nodenamecloud
+      containers:
+        - name: objectdetection
+          image: registry_ip_address:5000/liquidedge/objectdetection:kube
+          env:
+            - name: FACEDETECTION_HOST
+              value: "localhost:50053"
+            - name: YOLODETECTION_HOST
+              value: "localhost:50055"
+          ports:
+            - containerPort: 50051
+        - name: facedetection
+          image: registry_ip_address:5000/liquidedge/facedetection:kube
+        - name: yolodetection
+          image: registry_ip_address:5000/liquidedge/yolodetection-cuda:kube
+

@@ -9,32 +9,42 @@ radioresources:
     techno: "802.11ad"
     iface: eth0
     ipaddress: 192.168.100.82
+    gwaddress: 192.168.100.94
     user: admin
     password: ""
+    pingip: 192.168.100.10
   - identifier: mikrotik3
     techno: "802.11ad"
     iface: eth1
     ipaddress: 192.168.100.83
+    gwaddress: 192.168.100.94
     user: admin
     password: ""
+    pingip: 192.168.100.10
   - identifier: mikrotik4
     techno: "802.11ad"
     iface: eth2
     ipaddress: 192.168.100.84 
+    gwaddress: 192.168.100.94
     user: admin
     password: ""
+    pingip: 192.168.100.10
   - identifier: mikrotik8
     techno: "802.11ad"
     iface: eth3
     ipaddress: 192.168.100.88 
+    gwaddress: 192.168.100.94
     user: admin
+    password: "."
+    pingip: 192.168.100.10
+  - identifier: motog73
+    techno: "NR"
+    iface: usb1
+    ipaddress: 192.168.140.227
+    gwaddress: 192.168.140.116
+    user: ""
     password: ""
-  - identifier: tplink
-    techno: "802.11b/g/n"
-    iface: wlan1
-    ipaddress: 192.168.100.90
-    user: "admin"
-    password: ""
+    pingip: 8.8.8.8
 
 # Metric difference that triggers a switch
 dmetric: 400
@@ -46,4 +56,5 @@ tmon: 1
 tdec: 1
 
 # service access point IP address
-serviceIP: 192.168.100.10
+serviceIP: xxx.xxx.xxx.xxx
+servicePort: 30844

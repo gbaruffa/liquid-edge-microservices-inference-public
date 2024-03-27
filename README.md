@@ -10,10 +10,9 @@ The Robomaster S1 from DJI is modified with a custom communication turret (uses 
 
 For more details, please read (and cite!) the associated scientific paper
 
-> G. Baruffa, G. Costante, F. Crocetti, L. Rugini, P. Valigi, P. Banelli, A. Detti, "AI-driven Ground Robots: Mobile Edge Computing and
-mmWave Cellular Networks at Work," submitted to _IEEE Open Journal of the Communications Society_, 2023
+> G. Baruffa, A. Detti, L. Rugini, F. Crocetti, P. Banelli, G. Costante, P. Valigi, "AI-driven Ground Robots: Mobile Edge Computing and mmWave Communications at Work," submitted to _IEEE Open Journal of the Communications Society_, 2024
 
-**Abstract** - *AI-driven ground robots are gaining attention for their potential to transform urban life in areas like transportation, public safety, and environmental monitoring. The daily growth of AI technologies is paving the way for complex and computation-intensive tasks that these robots could perform, a vision that, however, clashes with the need for plenty of computing power and energy available in the robot, which is only sometimes possible. In these contexts, using cloud/edge computing services in conjunction with very high-speed communication systems can allow the workload to be offloaded out of the robot and consequently make the use of low-power robots feasible for complex tasks. This paper combines contemporary cloud and communication technologies in an architectural framework designed to provide ground robot applications with the ability to offload part of their tasks to cloud/edge data centers connected by cellular networks. The resulting architecture is meant for microservice applications and uses Kubernetes, Istio service mesh, OpenFlow, and IEEE 802.11ad mmWave (60 GHz) Wi-Fi access points. The architecture is validated through a testbed in which a ground robot autonomously tracks a moving object through AI algorithms and whose microservices are deployed on the robot and on the edge/cloud data centers it can exploit during its movements in different cells of a cellular network. Overall, the proposed network and cloud platform is generic and can be used for many other mobile applications that need to offload some of their tasks to back-end cloud/edge microservices.* 
+**Abstract** - *The seamless integration of multiple radio access technologies (multi-RAT) and edge/cloud resources is pivotal for advancing future networks, which seek to unify distributed and heterogeneous computing and communication resources into a cohesive continuum system, tailored for mobile applications. Many research projects and focused studies are proposing solutions in this area, the impact of which is undoubtedly increased by moving from theoretical and simulation studies to experimental validations. To this aim, this paper proposes a testbed architecture that combines contemporary communication and cloud technologies to provide microservice-based mobile applications with the ability to offload part of their tasks to cloud/edge data centers connected by multi-RAT cellular networks. The testbed leverages Kubernetes, Istio service mesh, OpenFlow, public 5G networks, and IEEE 802.11ad mmWave (60 GHz) Wi-Fi access points. The architecture is validated through a use case in which a ground robot autonomously follows a moving object by using an AI-driven computer vision application. Computation-intensive navigation tasks are offloaded by the robot to microservice instances, which are executed on demand within cloud and edge data centers that the robot can exploit during its journey. The proposed testbed is flexible and can be reused to assess communication and cloud innovations focusing on multi-RAT cloud continuum scenarios.* 
 
 You can also watch a short video showing the robot in action.
 
@@ -273,12 +272,21 @@ $ kubectl label ns robodemo istio-injection=enabled
 
 #### Run the microservices pods
 
-The folder ```kube``` contains the required manifests to start the pod with the microservices containers. To start and stop them, just type
+The folder ```kube``` contains the required manifests to start _on demand_ the pod with the microservices containers. To start the agent with automatic deployment, run
 
 ```cli
-$ kubectl apply -f kube
-$ kubectl delete -f kube
+$ ./kube/pyc-istio-monitor.py
 ```
+
+Note that you must suit the following lines in the agent
+
+```python
+cloud_name = "nodenamecloud"
+node_name_list = ("nodename1", "nodename2", "nodename3", "nodename4", "nodename5")
+pod_name_list = ("istio-ingressgateway-5c9b64675d-hqrdh", "istio-ingressgateway-5c9b64675d-ndplt", "istio-ingressgateway-5c9b64675d-h2fhx", "istio-ingressgateway-5c9b64675d-4spzp", "istio-ingressgateway-5c9b64675d-qpk9g")
+```
+
+by providing the names of cluster nodes and the istio ingress pod names, one for each node. Also remember to create a manifest for each node, _pyc-detection-gpu-pod-nodename1.yaml_, and a manifest for the cloud node, _pyc-detection-gpu-pod-cloud.yaml_.
 
 ## Execute the client
 
@@ -288,7 +296,7 @@ Connect to the Raspberry of the Robomaster using the control Wi-Fi link at 2.4 G
 $ PYTHONPATH=/home/pi/robomaster-standalone/src OBJECTDETECTION_HOST="192.168.0.140:30844" python3 ./src/robotclient/robotclient.py -i raspicam -n -c -k -t person -j
 ```
 
-and watch it tracking as you move along. Concurrently, in another shell terminal on the Raspberry, you can run the programs that manage the handovers between the base station and the relevant edge computers.
+and watch it tracking as you move along. Concurrently, in another shell terminal on the Raspberry, you can run the programs that manage the handovers between the base station and the relevant edge computers (e.g., _bestrssi-agent.py_).
 
 Note: for the static tests with _samplevideo_, please use the client named ```robotclient-videoclip```.
 

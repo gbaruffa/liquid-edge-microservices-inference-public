@@ -11,10 +11,12 @@ from signal import signal, SIGTERM, SIGINT
 from termcolor import cprint
 import math
 #from pythonping import ping
+from huawei_lte_api.Client import Client
+from huawei_lte_api.Connection import Connection
 
 # global variables
 keepRunning = True
-serviceIP = None
+iproutecmd = "add"
 
 def handle_sigs(*_):
   """Handle the OS signals"""
@@ -26,10 +28,12 @@ def handle_sigs(*_):
 
 def switch_radiores(radiores):
   """Switch the IP link to this radio resource"""
+  global iproutecmd
   cprint(f"switching to {radiores['iface']}", 'green')
-  global serviceIP
   if radiores['techno'] in ('802.11ad', '802.11b/g/n'):
     # use OvS
+    result = subprocess.run([f"ip route {iproutecmd} default via {radiores['gwaddress']} proto dhcp metric 220"], shell=True)
+    iproutecmd = "change"
     result = subprocess.run([f"ovs-ofctl mod-flows br-60G priority=10,cookie=0x10/0xFF,in_port='br-60G',actions=output:{radiores['iface']}"], shell=True)
     if result.returncode == 0:
       result = subprocess.run(["ovs-dpctl", "del-flows"])
@@ -37,17 +41,37 @@ def switch_radiores(radiores):
         time.sleep(0.05)
         with open("/tmp/currentovsport","w") as f:
           f.write(radiores['iface'])
-        result = subprocess.run(["ping", "-c", "1", "-s", "1", "-W", "1", serviceIP], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        pingIP = radiores['pingip']
+        print("Use pingIP", pingIP)
+        result = subprocess.run(["ping", "-c", "1", "-s", "1", "-W", "1", pingIP], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if result.returncode != 0:
-        #response = ping(gatewayIP, count=1, size=1, timeout=1)
-        #if response.success() == True:
-          cprint(f"ERROR: interface {radiores['iface']} not working or {serviceIP} unreachable", 'red')
+          cprint(f"ERROR: interface {radiores['iface']} not working or {pingIP} unreachable", 'red')
         else:
           print("Interface", radiores['iface'], "running")
       else:
         cprint("Could not flush the datapath", 'red')
     else:
       cprint("Could not change the flow", 'red')
+  elif radiores['techno'] == 'LTE':
+    # use OS
+    time.sleep(0.05)
+    with open("/tmp/currentovsport","w") as f:
+      f.write(radiores['iface'])
+    pingIP = radiores['pingip']
+    print("Use pingIP", pingIP)
+    result = subprocess.run(["ping", "-c", "1", "-s", "1", "-W", "1", pingIP], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if result.returncode != 0:
+      cprint(f"ERROR: interface {radiores['iface']} not working or {pingIP} unreachable", 'red')
+  elif radiores['techno'] == 'NR':
+    # use OS
+    result = subprocess.run([f"ip route {iproutecmd} default via {radiores['gwaddress']} proto dhcp metric 220"], shell=True)
+    iproutecmd = "change"
+    time.sleep(0.05)
+    with open("/tmp/currentovsport","w") as f:
+      f.write(radiores['iface'])
+    pingIP = radiores['pingip']
+    print("Use pingIP", pingIP)
+    result = subprocess.run(["ping", "-c", "1", "-s", "1", "-W", "1", pingIP], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
   else:
     cprint("Unknown switching method", 'red')
   pass
@@ -57,22 +81,47 @@ def radiores_thread(radiores):
   """Thread dedicated to the monitoring of a radio resource"""
   print(f"Radio resource \"{radiores['identifier']}\" started")
   lastTime = 0
-  discStatus = dict({'connected': False})
+  discStatus = dict({'connected': False, 'remote-address': ""})
   radiores['status'] = discStatus
   while keepRunning:
     if time.time() - lastTime > radiores['sleep']:
       lastTime = time.time()
       lastStatus = radiores['status']
       tempStatus = discStatus
-      if radiores['techno'] == '802.11ad':
+      if radiores['techno'] == 'LTE':
+        # 3GPP LTE radio technology 1800 MHz
+        try:
+          sigprop = hclient.device.signal()
+          sigstat = hclient.monitoring.status()
+          tempStatus['connected'] = True
+          tempStatus['rssi'] = float(sigprop['rssi'].replace('dBm', ''))
+          tempStatus['signal'] = 100 * float(sigstat['SignalIcon']) / float(sigstat['maxsignal'])
+          tempStatus['distance'] = math.inf
+          tempStatus['tx-phy-rate'] = 0
+          tempStatus['remote-address'] = ""
+        except:
+          try:
+            try:
+              hconnection.close()
+            except:
+              pass
+            hconnection = Connection('http://' + radiores['user'] + ':' + radiores['password'] + '@' + radiores['ipaddress'] + '/')
+            hclient = Client(hconnection)
+          except:
+            print("HUAWEI timed out")
+            pass
+      elif radiores['techno'] == '802.11ad':
         # IEEE 802.11ad 60 GHz radio technology
         try:
           res = api.get_resource('/interface/w60g').call('monitor', {'numbers': '0', 'once': ''})
           tempStatus = {**tempStatus, **res[0]}
           tempStatus['connected'] = True if tempStatus['connected'] == 'true' else False
-          tempStatus['distance'] = float(tempStatus['distance'].replace('m', ''))
-          tempStatus['tx-phy-rate'] = float(tempStatus['tx-phy-rate'])
-          #print(tempStatus)
+          if tempStatus['connected'] == True:
+            tempStatus['distance'] = float(tempStatus['distance'].replace('m', ''))
+            tempStatus['tx-phy-rate'] = float(tempStatus['tx-phy-rate'])
+          else:
+            tempStatus['distance'] = math.inf
+            tempStatus['tx-phy-rate'] = 0
         except:
           try:
             print(f"connecting {radiores['identifier']}...", end=" ")
@@ -86,6 +135,17 @@ def radiores_thread(radiores):
           except:
             print("connection timed out")
             pass
+      elif radiores['techno'] == 'NR':
+        # 5G NR via cellphone RNDIS 3.6 GHz
+        try:
+          tempStatus['connected'] = True
+          tempStatus['rssi'] = -106
+          tempStatus['signal'] = 100
+          tempStatus['distance'] = math.inf
+          tempStatus['tx-phy-rate'] = 0
+          tempStatus['remote-address'] = ""
+        except:
+          pass
       elif radiores['techno'] == '802.11b/g/n':
         # IEEE 802.11b/g/n 2.4 GHz radio technology
         tempStatus['connected'] = False
@@ -108,30 +168,28 @@ def radiores_thread(radiores):
                   tempStatus['tx-phy-rate'] = 0e6
                   tempStatus['remote-address'] = ""
                   break
-                  #print(toks)
               lnum = lnum + 1
             pnwfile.close()
-          #print(tempStatus)
         except:
           pass
 
       # assign the results
       radiores['status'] = tempStatus
 
-      # keep the connection just for one time update
-      if not radiores['status']['connected'] and lastStatus['connected']:
-        radiores['status'] = lastStatus
-        lastStatus = discStatus
-
     # try to check very often, actual check depends on the specified monitoring time
     time.sleep(0.1)
 
   # close the connection
-  try:
-    if radiores['techno'] == '802.11ad':
+  if radiores['techno'] == '802.11ad':
+    try:
       connection.disconnect()
-  except:
-    pass
+    except:
+      pass
+  elif radiores['techno'] == 'LTE':
+    try:
+      hconnection.close()
+    except:
+      pass
   print(f"radio resource \"{radiores['identifier']}\" stopped")
 
 
@@ -142,12 +200,12 @@ def main():
     sys.exit('This script must be run as root!')
 
   # read the configuration file
+  print("Reading the configuration file")
   try:
     with open(sys.argv[1]) as stream:
       config = yaml.load(stream, Loader=yaml.FullLoader) 
   except:
     with open("robot-rats.yaml") as stream:
-    #with open("config/nodes/raspi01/rssimonitor/robot-rats.yaml") as stream:
       try:
         config = yaml.load(stream, Loader=yaml.FullLoader) 
       except:
@@ -155,10 +213,9 @@ def main():
 
   # these are all our radioresources
   radioresources = config['radioresources']
-  global serviceIP
-  serviceIP = config['serviceIP']
 
   # we start the watching threads
+  print("Starting the monitors")
   thrs = []
   for radiores in radioresources:
     radiores['sleep'] = config['tmon']
@@ -167,11 +224,17 @@ def main():
     thrs[-1].start()
 
   # open logging file
+  print("Opening the log file")
   lf = open("logfile.csv", 'w')
   lf.write('"time"')
   for radiores in radioresources:
     lf.write(',"'+radiores['identifier']+'",bsid"')
   lf.write(',"best","switch"\n')
+
+  # clear all default routes
+  print("Clearing all default routes")
+  result = subprocess.run(["ip route flush 0/0"], shell=True)
+  time.sleep(0.05)
 
   # continuously find the best radio resource to use
   metrics = [-math.inf]*len(radioresources)
@@ -212,11 +275,9 @@ def main():
     print(f"{time.time() - prog_start_time:.2f}", rssis, quals, metrics, rates)
     lf.write("%f" % (time.time()))
     for s in range(len(radioresources)):
-      #print(radioresources[s])
       lf.write(',%.1f,"%s"' % (rssis[s], radioresources[s]['status']['remote-address'] if radioresources[s]['status']['connected'] else ""))
 
     # find the best one
-    #print(s_max, last_s_max, metric_max, rssis[s_max], rssis[last_s_max])
     if s_max != -1 and metric_max > -math.inf:
       cprint(f"Best: {radioresources[s_max]['identifier']} ({radioresources[s_max]['iface']}) at {rssis[s_max]}dBm with weight {metric_max}", 'yellow')
       if last_s_max == -1 or (s_max != last_s_max and metrics[s_max] >= metrics[last_s_max] + config['dmetric']):
@@ -244,6 +305,6 @@ if __name__ == "__main__":
   # register signals
   signal(SIGTERM, handle_sigs)
   signal(SIGINT, handle_sigs)
-  
+
   # Go!
   main()
